@@ -1,0 +1,11 @@
+#EXTM3U
+#EXT-X-VERSION:3   //indicating the version of the HLS playlist
+#EXT-X-TARGETDURATION:2  //indicating the maximum duration of the media segments in seconds
+#EXT-X-MEDIA-SEQUENCE:0  //indicating the sequence number of the first media segment
+#EXTINF:2.000000,  //indicating the duration of the media segment in seconds - 
+segment_000.ts  //the URL of the media segment
+#EXTINF:2.000000,
+segment_001.ts  //the URL of the media segment
+#EXTINF:2.000000,
+segment_002.ts  //the URL of the media segment
+#EXT-X-ENDLIST  //indicating the end of the playlist -

@@ -6,10 +6,7 @@ import (
 )
 
 func main() {
-	// Serve HLS files from the specified directory
 	http.Handle("/hls/", http.StripPrefix("/hls/", http.FileServer(http.Dir("./input"))))
-
-	// Serve the HTML file that plays the video
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		html := `
 		<!DOCTYPE html>

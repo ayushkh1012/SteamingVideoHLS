@@ -93,15 +93,28 @@ func main() {
 				const videoPlaylist = [
 					{
 						name: 'Big Bunny',
-						src: '/hls/bigbunny/1080p/playlist.m3u8'
+						src: '/hls/bigbunny/1080p/playlist.m3u8',
+						type: 'content'
+					},
+					{
+						name: 'Ad 1',
+						src: '/hls/advertising/ad1/1080p/playlist.m3u8',
+						type: 'ad'
 					},
 					{
 						name: 'Jelly',
-						src: '/hls/jelly/1080p/playlist.m3u8'
+						src: '/hls/jelly/1080p/playlist.m3u8',
+						type: 'content'
+					},
+					{
+						name: 'Ad 2',
+						src: '/hls/advertising/ad2/1080p/playlist.m3u8',
+						type: 'ad'
 					},
 					{
 						name: 'Sintel',
-						src: '/hls/sintel/1080p/playlist.m3u8'
+						src: '/hls/sintel/1080p/playlist.m3u8',
+						type: 'content'
 					}
 				];
 
@@ -111,15 +124,47 @@ func main() {
 				function playNextVideo() {
 					currentVideoIndex = (currentVideoIndex + 1) % videoPlaylist.length;
 					const nextVideo = videoPlaylist[currentVideoIndex];
-					document.getElementById('current-video').textContent = nextVideo.name;
+					
+					// Update display (show "Advertisement" for ads)
+					document.getElementById('current-video').textContent = 
+						nextVideo.type === 'ad' ? 'Advertisement' : nextVideo.name;
+					
 					player.src({
 						src: nextVideo.src,
 						type: 'application/x-mpegURL'
 					});
+					
 					if (playlistStarted) {
 						player.play();
 					}
+
+					// If it's an ad, disable seeking
+					if (nextVideo.type === 'ad') {
+						player.controlBar.progressControl.disable();
+					} else {
+						player.controlBar.progressControl.enable();
+					}
 				}
+
+				// Handle SCTE markers
+				player.on('cuepoint', function(event) {
+					console.log('Cue point reached:', event);
+					if (event.type === 'cue-out') {
+						// Ad break starting
+						player.controlBar.progressControl.disable();
+					} else if (event.type === 'cue-in') {
+						// Ad break ending
+						player.controlBar.progressControl.enable();
+					}
+				});
+
+				// Disable seeking during ads
+				player.on('seeking', function() {
+					const currentVideo = videoPlaylist[currentVideoIndex];
+					if (currentVideo.type === 'ad') {
+						player.currentTime(player.currentTime());
+					}
+				});
 
 				// Play next video when current one ends
 				player.on('ended', playNextVideo);

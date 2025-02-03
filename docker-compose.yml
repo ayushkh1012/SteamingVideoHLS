@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  video-server:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-streaming
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./input:/app/input:ro
+    environment:
+      - GO_ENV=development
+      - TZ=UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -3,10 +3,26 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 )
 
 func main() {
 	http.Handle("/hls/", http.StripPrefix("/hls/", http.FileServer(http.Dir("./input"))))
+	http.Handle("/vast/", http.StripPrefix("/vast/", http.FileServer(http.Dir("./input/vast"))))
+	http.HandleFunc("/tracking/", func(w http.ResponseWriter, r *http.Request) {
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		event := r.URL.Path[len("/tracking/"):]
+		adID := r.URL.Query().Get("adid")
+		
+		fmt.Printf("[%s] Ad Event - Type: %s, Ad ID: %s\n", timestamp, event, adID)
+		
+		// Log additional request details
+		fmt.Printf("  User-Agent: %s\n", r.UserAgent())
+		fmt.Printf("  Referer: %s\n", r.Referer())
+		fmt.Printf("  IP: %s\n", r.RemoteAddr)
+		
+		w.WriteHeader(http.StatusOK)
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		html := `
 		<!DOCTYPE html>
@@ -98,7 +114,7 @@ func main() {
 					},
 					{
 						name: 'Ad 1',
-						src: '/hls/advertising/ad1/1080p/playlist.m3u8',
+						src: '/vast/ad1.xml',
 						type: 'ad'
 					},
 					{
@@ -108,7 +124,7 @@ func main() {
 					},
 					{
 						name: 'Ad 2',
-						src: '/hls/advertising/ad2/1080p/playlist.m3u8',
+						src: '/vast/ad2.xml',
 						type: 'ad'
 					},
 					{
@@ -120,43 +136,76 @@ func main() {
 
 				let currentVideoIndex = 0;
 				let playlistStarted = false;
+				let tracked25 = false;
+				let tracked50 = false;
+				let tracked75 = false;
 
 				function playNextVideo() {
 					currentVideoIndex = (currentVideoIndex + 1) % videoPlaylist.length;
 					const nextVideo = videoPlaylist[currentVideoIndex];
 					
-					// Update display (show "Advertisement" for ads)
 					document.getElementById('current-video').textContent = 
 						nextVideo.type === 'ad' ? 'Advertisement' : nextVideo.name;
 					
-					player.src({
-						src: nextVideo.src,
-						type: 'application/x-mpegURL'
-					});
-					
-					if (playlistStarted) {
-						player.play();
-					}
-
-					// If it's an ad, disable seeking
 					if (nextVideo.type === 'ad') {
-						player.controlBar.progressControl.disable();
+						// Handle VAST ad
+						fetch(nextVideo.src)
+							.then(response => response.text())
+							.then(vastXml => {
+								// Parse VAST XML and get media file URL
+								const parser = new DOMParser();
+								const xmlDoc = parser.parseFromString(vastXml, "text/xml");
+								const mediaFile = xmlDoc.querySelector("MediaFile");
+								const adUrl = mediaFile.textContent.trim();
+								
+								// Send impression tracking
+								const impression = xmlDoc.querySelector("Impression");
+								if (impression) {
+									fetch(impression.textContent.trim());
+								}
+								
+								// Play the ad
+								player.src({
+									src: adUrl,
+									type: 'application/x-mpegURL'
+								});
+								
+								if (playlistStarted) {
+									player.play();
+								}
+								
+								// Disable seeking during ad
+								player.controlBar.progressControl.disable();
+								
+								// Setup tracking events
+								const trackingEvents = xmlDoc.querySelectorAll("Tracking");
+								trackingEvents.forEach(event => {
+									const eventType = event.getAttribute("event");
+									const trackingUrl = event.textContent.trim();
+									
+									player.on(eventType, function() {
+										fetch(trackingUrl);
+									});
+								});
+							})
+							.catch(error => {
+								console.error('Error loading VAST:', error);
+								playNextVideo(); // Skip ad on error
+							});
 					} else {
+						// Play regular content
+						player.src({
+							src: nextVideo.src,
+							type: 'application/x-mpegURL'
+						});
+						
+						if (playlistStarted) {
+							player.play();
+						}
+						
 						player.controlBar.progressControl.enable();
 					}
 				}
-
-				// Handle SCTE markers
-				player.on('cuepoint', function(event) {
-					console.log('Cue point reached:', event);
-					if (event.type === 'cue-out') {
-						// Ad break starting
-						player.controlBar.progressControl.disable();
-					} else if (event.type === 'cue-in') {
-						// Ad break ending
-						player.controlBar.progressControl.enable();
-					}
-				});
 
 				// Disable seeking during ads
 				player.on('seeking', function() {
@@ -217,6 +266,35 @@ func main() {
 				player.ready(function() {
 					console.log('Player is ready');
 					document.getElementById('current-video').textContent = videoPlaylist[currentVideoIndex].name;
+				});
+
+				player.on('timeupdate', function() {
+					if (videoPlaylist[currentVideoIndex].type === 'ad') {
+						const currentTime = player.currentTime();
+						const duration = player.duration();
+						const percent = (currentTime / duration) * 100;
+						
+						// Track quartiles
+						if (percent >= 25 && !tracked25) {
+							tracked25 = true;
+							fetch('/tracking/firstQuartile?adid=' + videoPlaylist[currentVideoIndex].name);
+						}
+						if (percent >= 50 && !tracked50) {
+							tracked50 = true;
+							fetch('/tracking/midpoint?adid=' + videoPlaylist[currentVideoIndex].name);
+						}
+						if (percent >= 75 && !tracked75) {
+							tracked75 = true;
+							fetch('/tracking/thirdQuartile?adid=' + videoPlaylist[currentVideoIndex].name);
+						}
+					}
+				});
+
+				// Reset tracking flags when video changes
+				player.on('loadstart', function() {
+					tracked25 = false;
+					tracked50 = false;
+					tracked75 = false;
 				});
 			</script>
 		</body>

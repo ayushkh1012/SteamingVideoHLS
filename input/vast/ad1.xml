@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VAST version="3.0">
+    <Ad id="ad1">
+        <InLine>
+            <AdSystem>advertising</AdSystem>
+            <AdTitle>Ad 1</AdTitle>
+            <Impression>http://localhost:8080/tracking/impression?adid=ad1</Impression>
+            <Creatives>
+                <Creative>
+                    <Linear>
+                        <Duration>00:00:10</Duration>
+                        <MediaFiles>
+                            <MediaFile delivery="progressive" type="video/mp4" width="1920" height="1080">
+                                <![CDATA[/hls/advertising/ad1/1080p/playlist.m3u8]]>
+                            </MediaFile>
+                        </MediaFiles>
+                        <TrackingEvents>
+                            <Tracking event="start">http://localhost:8080/tracking/start?adid=ad1</Tracking>
+                            <Tracking event="firstQuartile">http://localhost:8080/tracking/firstQuartile?adid=ad1</Tracking>
+                            <Tracking event="midpoint">http://localhost:8080/tracking/midpoint?adid=ad1</Tracking>
+                            <Tracking event="thirdQuartile">http://localhost:8080/tracking/thirdQuartile?adid=ad1</Tracking>
+                            <Tracking event="complete">http://localhost:8080/tracking/complete?adid=ad1</Tracking>
+                        </TrackingEvents>
+                    </Linear>
+                </Creative>
+            </Creatives>
+        </InLine>
+    </Ad>
+</VAST> 

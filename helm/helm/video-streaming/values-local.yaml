@@ -1,0 +1,21 @@
+image:
+  repository: video-streaming
+  pullPolicy: Never
+  tag: "latest"
+
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 30080
+
+volumes:
+  content:
+    hostPath: "/app/input"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

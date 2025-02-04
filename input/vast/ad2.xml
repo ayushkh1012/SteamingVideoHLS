@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VAST version="3.0">
+    <Ad id="ad2">
+        <InLine>
+            <AdSystem>advertising</AdSystem>
+            <AdTitle>Ad 2</AdTitle>
+            <Impression>http://localhost:8080/tracking/impression</Impression>
+            <Creatives>
+                <Creative>
+                    <Linear>
+                        <Duration>00:00:10</Duration>
+                        <MediaFiles>
+                            <MediaFile delivery="progressive" type="video/mp4" width="1920" height="1080">
+                                <![CDATA[/hls/advertising/ad2/1080p/playlist.m3u8]]>
+                            </MediaFile>
+                        </MediaFiles>
+                        <TrackingEvents>
+                            <Tracking event="start">http://localhost:8080/tracking/start</Tracking>
+                            <Tracking event="complete">http://localhost:8080/tracking/complete</Tracking>
+                        </TrackingEvents>
+                    </Linear>
+                </Creative>
+            </Creatives>
+        </InLine>
+    </Ad>
+</VAST> 
